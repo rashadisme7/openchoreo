@@ -205,3 +205,20 @@ docker.push-multiarch:
 			-f "$$tmp/Dockerfile" "$$tmp" \
 			--push --provenance=false --sbom=false; \
 	done
+
+# Temporary XDP demo override: replace each real per-image build with a tiny placeholder image.
+.PHONY: docker.push-multiarch.%
+docker.push-multiarch.%:
+	@set -eu; \
+	tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	printf 'FROM scratch\nLABEL org.opencontainers.image.title="xdp-demo-openchoreo"\n' > "$$tmp/Dockerfile"; \
+	echo "Publishing demo image $(IMAGE_REPO_PREFIX)/$*:$(TAG)"; \
+	$(DOCKER) buildx build --platform $(BUILDX_TARGET_PLATFORMS) \
+		-t "$(IMAGE_REPO_PREFIX)/$*:$(TAG)" \
+		-f "$$tmp/Dockerfile" "$$tmp" \
+		--push --provenance=false --sbom=false
+
+.PHONY: docker.push-multiarch
+docker.push-multiarch:
+	@echo "Published XDP demo Docker images"

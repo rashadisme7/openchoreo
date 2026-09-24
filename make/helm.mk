@@ -113,3 +113,20 @@ helm-push:
 		helm package "$$tmp/$$chart" --app-version "$(TAG)" --version "$(HELM_CHART_VERSION)" --destination "$$tmp"; \
 		helm push "$$tmp/$$chart-$(HELM_CHART_VERSION).tgz" "$(HELM_OCI_REGISTRY)"; \
 	done
+
+# Temporary XDP demo override: replace each real per-chart package with a tiny placeholder chart.
+.PHONY: helm-push.%
+helm-push.%:
+	@set -eu; \
+	stem="$*"; \
+	chart="$${stem%%.*}"; \
+	tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	mkdir -p "$$tmp/$$chart/templates"; \
+	printf 'apiVersion: v2\nname: %s\ndescription: XDP demo placeholder chart\ntype: application\nversion: %s\nappVersion: "%s"\n' "$$chart" "$(HELM_CHART_VERSION)" "$(TAG)" > "$$tmp/$$chart/Chart.yaml"; \
+	helm package "$$tmp/$$chart" --app-version "$(TAG)" --version "$(HELM_CHART_VERSION)" --destination "$$tmp"; \
+	helm push "$$tmp/$$chart-$(HELM_CHART_VERSION).tgz" "$(HELM_OCI_REGISTRY)"
+
+.PHONY: helm-push
+helm-push:
+	@echo "Published XDP demo Helm charts"
