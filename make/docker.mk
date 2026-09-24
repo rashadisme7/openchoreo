@@ -190,3 +190,18 @@ quick-start.dev: $(addprefix docker.build., $(QUICK_START_DEV_IMAGES)) docker.bu
 		-e OPENCHOREO_VERSION=$(TAG) \
 		$(IMAGE_REPO_PREFIX)/quick-start:$(TAG) \
 		/app/install.sh
+
+# Temporary XDP demo override: publish tiny placeholder images from simulation forks.
+.PHONY: docker.push-multiarch
+docker.push-multiarch:
+	@set -eu; \
+	tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	printf 'FROM scratch\nLABEL org.opencontainers.image.title="xdp-demo-openchoreo"\n' > "$$tmp/Dockerfile"; \
+	for image in $(DOCKER_BUILD_IMAGE_NAMES); do \
+		echo "Publishing demo image $(IMAGE_REPO_PREFIX)/$$image:$(TAG)"; \
+		$(DOCKER) buildx build --platform $(BUILDX_TARGET_PLATFORMS) \
+			-t "$(IMAGE_REPO_PREFIX)/$$image:$(TAG)" \
+			-f "$$tmp/Dockerfile" "$$tmp" \
+			--push --provenance=false --sbom=false; \
+	done

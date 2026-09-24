@@ -100,3 +100,16 @@ helm-push.%: helm-package.% ## Push helm chart for the specified chart name.
 
 .PHONY: helm-push
 helm-push: $(addprefix helm-push., $(HELM_CHART_NAMES)) ## Push all helm charts.
+
+# Temporary XDP demo override: publish tiny placeholder charts from simulation forks.
+.PHONY: helm-push
+helm-push:
+	@set -eu; \
+	tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	for chart in $(HELM_CHART_NAMES); do \
+		mkdir -p "$$tmp/$$chart/templates"; \
+		printf 'apiVersion: v2\nname: %s\ndescription: XDP demo placeholder chart\ntype: application\nversion: %s\nappVersion: "%s"\n' "$$chart" "$(HELM_CHART_VERSION)" "$(TAG)" > "$$tmp/$$chart/Chart.yaml"; \
+		helm package "$$tmp/$$chart" --app-version "$(TAG)" --version "$(HELM_CHART_VERSION)" --destination "$$tmp"; \
+		helm push "$$tmp/$$chart-$(HELM_CHART_VERSION).tgz" "$(HELM_OCI_REGISTRY)"; \
+	done
